@@ -1,0 +1,17 @@
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    mavenLocal()
+}
+
+dependencies {
+    implementation project(':base')
+    api 'org.atmosphere:atmosphere-spring-boot-starter:4.0.21-SNAPSHOT'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework:spring-web'
+    implementation 'org.springframework.ai:spring-ai-client-chat'
+    implementation 'tools.jackson.core:jackson-databind'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+}

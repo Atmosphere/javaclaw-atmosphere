@@ -19,9 +19,11 @@ import ai.javaclaw.agent.Agent;
 import ai.javaclaw.channels.ChannelRegistry;
 import org.atmosphere.cpr.AtmosphereFramework;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.ObjectMapper;
 
@@ -40,6 +42,13 @@ import tools.jackson.databind.ObjectMapper;
 @ConditionalOnClass(AtmosphereFramework.class)
 @ConditionalOnBean(Agent.class)
 public class AtmosphereChannelAutoConfiguration {
+
+    @Bean
+    @org.springframework.context.annotation.Primary
+    @ConditionalOnProperty(name = "atmosphere.test.synthetic-llm", havingValue = "true")
+    public ChatModel syntheticChatModel() {
+        return new SyntheticChatModel();
+    }
 
     @Bean
     public AtmosphereChatChannel atmosphereChatChannel(Agent agent,

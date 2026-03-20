@@ -1,6 +1,8 @@
 # Atmosphere Chat Transport for JavaClaw
 
 [![CI](https://github.com/Atmosphere/javaclaw-atmosphere/actions/workflows/ci.yml/badge.svg)](https://github.com/Atmosphere/javaclaw-atmosphere/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Atmosphere/javaclaw-atmosphere?label=release)](https://github.com/Atmosphere/javaclaw-atmosphere/releases)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Drop-in replacement for [JavaClaw](https://github.com/jobrunr/JavaClaw)'s Spring WebSocket chat with [Atmosphere](https://github.com/Atmosphere/atmosphere).
 

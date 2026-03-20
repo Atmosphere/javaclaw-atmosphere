@@ -14,23 +14,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up JDK 21 (for Atmosphere Maven build)
+    - name: Set up JDK 25
       uses: actions/setup-java@v4
       with:
-        java-version: 21
-        distribution: 'temurin'
+        java-version: 25
+        distribution: 'oracle'
 
     - name: Build Atmosphere (dependency)
       run: |
         git clone --depth 1 https://github.com/Atmosphere/atmosphere.git /tmp/atmosphere
         cd /tmp/atmosphere
         ./mvnw -B install -Pfastinstall -pl modules/cpr,modules/spring-boot-starter -am
-
-    - name: Set up JDK 25 (for JavaClaw + plugin)
-      uses: actions/setup-java@v4
-      with:
-        java-version: 25
-        distribution: 'oracle'
 
     - name: Build JavaClaw base (dependency)
       run: |
@@ -63,23 +57,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up JDK 21
+    - name: Set up JDK 25
       uses: actions/setup-java@v4
       with:
-        java-version: 21
-        distribution: 'temurin'
+        java-version: 25
+        distribution: 'oracle'
 
     - name: Build Atmosphere
       run: |
         git clone --depth 1 https://github.com/Atmosphere/atmosphere.git /tmp/atmosphere
         cd /tmp/atmosphere
         ./mvnw -B install -Pfastinstall -pl modules/cpr,modules/spring-boot-starter -am
-
-    - name: Set up JDK 25
-      uses: actions/setup-java@v4
-      with:
-        java-version: 25
-        distribution: 'oracle'
 
     - name: Build JavaClaw with Atmosphere plugin
       run: |
@@ -108,9 +96,8 @@ jobs:
         # Add atmosphere config
         sed -i '/^management:/i atmosphere:\n  servlet-path: /atmosphere/*\n  broadcaster-cache-class: org.atmosphere.cache.UUIDBroadcasterCache\n' app/src/main/resources/application.yaml
 
-        # Boot the app
+        # Boot the app in background
         ./gradlew :app:bootRun &
-        BOOT_PID=$!
 
         # Wait for startup
         for i in $(seq 1 60); do

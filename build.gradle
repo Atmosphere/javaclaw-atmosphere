@@ -99,7 +99,7 @@ publishing {
     repositories {
         maven {
             name = 'central'
-            url = 'https://central.sonatype.com/repository/maven-releases/'
+            url = 'https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/'
             credentials {
                 username = findProperty('centralUsername') ?: System.getenv('CENTRAL_USERNAME') ?: ''
                 password = findProperty('centralPassword') ?: System.getenv('CENTRAL_PASSWORD') ?: ''

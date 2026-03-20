@@ -50,10 +50,30 @@
         },
 
         message: function (response) {
-            var html = response.responseBody;
-            if (!html || html.trim().length === 0) return;
+            var data = response.responseBody;
+            if (!data || data.trim().length === 0) return;
 
-            processOobSwaps(html);
+            // Try JSON first (streaming tokens)
+            if (data.charAt(0) === '{') {
+                try {
+                    var msg = JSON.parse(data);
+                    if (msg.token !== undefined) {
+                        appendToken(msg.token);
+                        scrollToBottom();
+                        return;
+                    }
+                    if (msg.done) {
+                        finalizeStreaming();
+                        scrollToBottom();
+                        return;
+                    }
+                } catch (e) {
+                    // Not JSON — fall through to OOB processing
+                }
+            }
+
+            // OOB swap HTML (user bubble, typing indicator, background messages)
+            processOobSwaps(data);
             scrollToBottom();
         }
     };
@@ -92,6 +112,36 @@
                 sendMessage();
             }
         });
+    }
+
+    // ---- Streaming token handling ----
+
+    function appendToken(token) {
+        var bubble = document.getElementById('streaming-bubble');
+        if (!bubble) {
+            // First token — create the agent bubble and hide typing dots
+            var messages = document.getElementById('chat-messages');
+            if (messages) {
+                messages.insertAdjacentHTML('beforeend',
+                    '<article class="ar-msg ar-msg--agent">' +
+                    '<div class="ar-msg__avatar">JC</div>' +
+                    '<div class="ar-msg__bubble" id="streaming-bubble"></div>' +
+                    '</article>');
+            }
+            var typing = document.getElementById('typing-indicator');
+            if (typing) typing.innerHTML = '';
+            bubble = document.getElementById('streaming-bubble');
+        }
+        if (bubble) {
+            bubble.insertAdjacentText('beforeend', token);
+        }
+    }
+
+    function finalizeStreaming() {
+        var bubble = document.getElementById('streaming-bubble');
+        if (bubble) {
+            bubble.removeAttribute('id');
+        }
     }
 
     // ---- OOB swap processing ----

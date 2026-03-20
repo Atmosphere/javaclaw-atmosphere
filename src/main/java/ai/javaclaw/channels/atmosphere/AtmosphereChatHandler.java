@@ -16,35 +16,44 @@
 package ai.javaclaw.channels.atmosphere;
 
 import java.io.IOException;
+import java.util.Map;
 
-import org.atmosphere.config.service.AtmosphereHandlerService;
+import ai.javaclaw.channels.ChannelMessageReceivedEvent;
+import ai.javaclaw.channels.ChannelRegistry;
 import org.atmosphere.cpr.AtmosphereHandler;
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResourceEvent;
 import org.atmosphere.cpr.AtmosphereResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.web.util.HtmlUtils;
 
 import tools.jackson.databind.ObjectMapper;
 
-import java.util.Map;
-
 /**
- * Atmosphere handler that processes chat messages from the web UI.
+ * Atmosphere handler that streams AI responses token-by-token.
  * <p>
  * Replaces JavaClaw's {@code ChatWebSocketHandler} and {@code WebSocketConfig}.
+ * Uses the same {@link ChatClient} bean (with all advisors, tools, and memory)
+ * but calls {@code .stream()} instead of {@code .call()}, delivering each token
+ * to the browser as it arrives — like ChatGPT, Claude, and other modern AI chats.
+ * <p>
  * Supports WebSocket, SSE, and long-polling transports transparently.
  */
 public class AtmosphereChatHandler implements AtmosphereHandler {
 
     private static final Logger log = LoggerFactory.getLogger(AtmosphereChatHandler.class);
 
-    private final AtmosphereChatChannel chatChannel;
+    private final ChatClient chatClient;
+    private final ChannelRegistry channelRegistry;
     private final ObjectMapper objectMapper;
 
-    public AtmosphereChatHandler(AtmosphereChatChannel chatChannel, ObjectMapper objectMapper) {
-        this.chatChannel = chatChannel;
+    public AtmosphereChatHandler(ChatClient chatClient, ChannelRegistry channelRegistry,
+                                 ObjectMapper objectMapper) {
+        this.chatClient = chatClient;
+        this.channelRegistry = channelRegistry;
         this.objectMapper = objectMapper;
     }
 
@@ -55,7 +64,6 @@ public class AtmosphereChatHandler implements AtmosphereHandler {
         if (body != null && !body.isBlank()) {
             handleMessage(resource, body);
         } else {
-            // Initial connection — suspend to keep the transport open
             resource.suspend();
         }
     }
@@ -76,7 +84,6 @@ public class AtmosphereChatHandler implements AtmosphereHandler {
 
     @Override
     public void destroy() {
-        // nothing to clean up
     }
 
     @SuppressWarnings("unchecked")
@@ -89,27 +96,84 @@ public class AtmosphereChatHandler implements AtmosphereHandler {
         }
         userMessage = userMessage.trim();
 
-        // Echo user bubble + show typing indicator to the sender
+        // Track this channel as the latest for background task routing
+        channelRegistry.publishMessageReceivedEvent(
+                new ChannelMessageReceivedEvent(AtmosphereChatChannel.CHANNEL_NAME, userMessage));
+
         AtmosphereResponse response = resource.getResponse();
+
+        // Send user bubble + typing indicator (client creates the streaming
+        // bubble when the first token arrives, replacing the typing dots)
         response.write(
                 oobAppend("chat-messages", userBubble(userMessage)) +
                 oobReplace("typing-indicator", typingDots())
         );
         response.flushBuffer();
 
-        // Call agent (blocking — background tasks may push messages via
-        // AtmosphereChatChannel's broadcaster during this call)
-        String agentResponse = chatChannel.chat(userMessage);
-
-        // Send agent response + clear typing indicator
-        response.write(
-                oobAppend("chat-messages", agentBubble(agentResponse)) +
-                oobReplace("typing-indicator", "")
-        );
-        response.flushBuffer();
+        // Stream the AI response token-by-token using the same ChatClient bean
+        // (same advisors, tools, memory — just .stream() instead of .call())
+        try {
+            chatClient.prompt(userMessage)
+                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, ChatMemory.CONVERSATION_ID))
+                    .stream()
+                    .content()
+                    .doOnNext(token -> writeToken(response, token))
+                    .doOnComplete(() -> writeStreamEnd(response))
+                    .doOnError(err -> {
+                        log.error("Streaming error: {}", err.getMessage());
+                        writeToken(response, "\n\n[Error: " + err.getMessage() + "]");
+                        writeStreamEnd(response);
+                    })
+                    .blockLast();
+        } catch (Exception e) {
+            log.error("Failed to start streaming: {}", e.getMessage());
+            writeToken(response, "Sorry, I encountered an error: " + e.getMessage());
+            writeStreamEnd(response);
+        }
     }
 
-    // ---- HTML helpers (same format as JavaClaw's ChatWebSocketHandler) ----
+    private void writeToken(AtmosphereResponse response, String token) {
+        try {
+            response.write("{\"token\":" + jsonEscape(token) + "}");
+            response.flushBuffer();
+        } catch (IOException e) {
+            log.warn("Failed to write streaming token: {}", e.getMessage());
+        }
+    }
+
+    private void writeStreamEnd(AtmosphereResponse response) {
+        try {
+            response.write("{\"done\":true}");
+            response.write(oobReplace("typing-indicator", ""));
+            response.flushBuffer();
+        } catch (IOException e) {
+            log.warn("Failed to write stream completion: {}", e.getMessage());
+        }
+    }
+
+    private static String jsonEscape(String text) {
+        var sb = new StringBuilder("\"");
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.append("\"").toString();
+    }
+
+    // ---- HTML helpers ----
 
     static String userBubble(String text) {
         return "<article class=\"ar-msg ar-msg--user\">" +
@@ -117,10 +181,10 @@ public class AtmosphereChatHandler implements AtmosphereHandler {
                 "</article>";
     }
 
-    static String agentBubble(String text) {
+    static String streamingAgentBubble() {
         return "<article class=\"ar-msg ar-msg--agent\">" +
                 "<div class=\"ar-msg__avatar\">JC</div>" +
-                "<div class=\"ar-msg__bubble\">" + escape(text) + "</div>" +
+                "<div class=\"ar-msg__bubble\" id=\"streaming-bubble\"></div>" +
                 "</article>";
     }
 

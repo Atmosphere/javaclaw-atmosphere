@@ -18,6 +18,7 @@ package ai.javaclaw.channels.atmosphere;
 import ai.javaclaw.agent.Agent;
 import ai.javaclaw.channels.ChannelRegistry;
 import org.atmosphere.cpr.AtmosphereFramework;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -26,8 +27,11 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * Spring Boot auto-configuration that wires up Atmosphere as the chat
- * transport for JavaClaw, replacing the default Spring WebSocket-based
- * {@code ChatChannel}, {@code ChatWebSocketHandler}, and {@code WebSocketConfig}.
+ * transport for JavaClaw with streaming AI responses.
+ *
+ * <p>Uses the same {@link ChatClient} bean as JavaClaw's {@code DefaultAgent}
+ * (with all advisors, tools, and memory) but calls {@code .stream()} instead
+ * of {@code .call()}, delivering each token to the browser as it arrives.
  *
  * <p>Activated automatically when both {@code AtmosphereFramework} and
  * {@code Agent} are on the classpath.
@@ -45,10 +49,11 @@ public class AtmosphereChannelAutoConfiguration {
     }
 
     @Bean
-    public AtmosphereChatHandler atmosphereChatHandler(AtmosphereChatChannel chatChannel,
+    public AtmosphereChatHandler atmosphereChatHandler(ChatClient chatClient,
+                                                       ChannelRegistry channelRegistry,
                                                        ObjectMapper objectMapper,
                                                        AtmosphereFramework framework) {
-        var handler = new AtmosphereChatHandler(chatChannel, objectMapper);
+        var handler = new AtmosphereChatHandler(chatClient, channelRegistry, objectMapper);
         framework.addAtmosphereHandler(AtmosphereChatChannel.BROADCASTER_PATH, handler);
         return handler;
     }

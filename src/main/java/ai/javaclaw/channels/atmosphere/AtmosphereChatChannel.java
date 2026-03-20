@@ -36,6 +36,7 @@ public class AtmosphereChatChannel implements Channel {
     private static final Logger log = LoggerFactory.getLogger(AtmosphereChatChannel.class);
 
     static final String BROADCASTER_PATH = "/atmosphere/chat";
+    static final String CHANNEL_NAME = "Web Chat Channel";
 
     private final Agent agent;
     private final ChannelRegistry channelRegistry;
@@ -52,7 +53,7 @@ public class AtmosphereChatChannel implements Channel {
 
     @Override
     public String getName() {
-        return "Web Chat Channel";
+        return CHANNEL_NAME;
     }
 
     /**

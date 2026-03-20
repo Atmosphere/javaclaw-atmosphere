@@ -8,27 +8,31 @@ on:
 
 jobs:
   build:
-    name: Build (JDK ${{ matrix.java }})
+    name: Build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ 25 ]
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up JDK ${{ matrix.java }}
+    - name: Set up JDK 21 (for Atmosphere build)
       uses: actions/setup-java@v4
       with:
-        java-version: ${{ matrix.java }}
-        distribution: 'oracle'
-        cache: 'gradle'
+        java-version: 21
+        distribution: 'temurin'
+        cache: 'maven'
 
     - name: Build Atmosphere (dependency)
       run: |
         git clone --depth 1 https://github.com/Atmosphere/atmosphere.git /tmp/atmosphere
         cd /tmp/atmosphere
         ./mvnw -B install -Pfastinstall -pl modules/cpr,modules/spring-boot-starter -am
+
+    - name: Set up JDK 25 (for JavaClaw + plugin)
+      uses: actions/setup-java@v4
+      with:
+        java-version: 25
+        distribution: 'oracle'
+        cache: 'gradle'
 
     - name: Build JavaClaw base (dependency)
       run: |
@@ -49,7 +53,6 @@ jobs:
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
-      if: matrix.java == 25
       with:
         name: javaclaw-atmosphere
         path: build/libs/*.jar

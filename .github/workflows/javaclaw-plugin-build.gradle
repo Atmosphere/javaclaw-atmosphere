@@ -8,7 +8,7 @@ repositories {
 
 dependencies {
     implementation project(':base')
-    api 'org.atmosphere:atmosphere-spring-boot-starter:4.0.21-SNAPSHOT'
+    api 'org.atmosphere:atmosphere-spring-boot-starter:4.0.22-SNAPSHOT'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework:spring-web'
     implementation 'org.springframework.ai:spring-ai-client-chat'

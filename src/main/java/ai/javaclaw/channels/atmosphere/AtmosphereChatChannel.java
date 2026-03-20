@@ -19,6 +19,7 @@ import ai.javaclaw.agent.Agent;
 import ai.javaclaw.channels.Channel;
 import ai.javaclaw.channels.ChannelMessageReceivedEvent;
 import ai.javaclaw.channels.ChannelRegistry;
+import org.atmosphere.cpr.AtmosphereFramework;
 import org.atmosphere.cpr.Broadcaster;
 import org.atmosphere.cpr.BroadcasterFactory;
 import org.slf4j.Logger;
@@ -34,17 +35,17 @@ public class AtmosphereChatChannel implements Channel {
 
     private static final Logger log = LoggerFactory.getLogger(AtmosphereChatChannel.class);
 
-    static final String BROADCASTER_PATH = "/chat";
+    static final String BROADCASTER_PATH = "/atmosphere/chat";
 
     private final Agent agent;
     private final ChannelRegistry channelRegistry;
-    private final BroadcasterFactory broadcasterFactory;
+    private final AtmosphereFramework framework;
 
     public AtmosphereChatChannel(Agent agent, ChannelRegistry channelRegistry,
-                                 BroadcasterFactory broadcasterFactory) {
+                                 AtmosphereFramework framework) {
         this.agent = agent;
         this.channelRegistry = channelRegistry;
-        this.broadcasterFactory = broadcasterFactory;
+        this.framework = framework;
         channelRegistry.registerChannel(this);
         log.info("Started Atmosphere Chat channel");
     }
@@ -71,7 +72,12 @@ public class AtmosphereChatChannel implements Channel {
      */
     @Override
     public void sendMessage(String message) {
-        broadcasterFactory.findBroadcaster(BROADCASTER_PATH)
+        BroadcasterFactory factory = framework.getBroadcasterFactory();
+        if (factory == null) {
+            log.warn("Atmosphere framework not yet initialized, message dropped");
+            return;
+        }
+        factory.findBroadcaster(BROADCASTER_PATH)
                 .ifPresentOrElse(
                         b -> b.broadcast(buildBackgroundMessageHtml(message)),
                         () -> log.warn("No Atmosphere broadcaster for path '{}', message dropped",

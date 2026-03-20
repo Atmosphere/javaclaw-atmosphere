@@ -211,6 +211,6 @@
 
 {% block scripts %}
 {# atmosphere.js replaces htmx-ext-ws — provides WebSocket + SSE + long-polling fallback #}
-<script src="https://cdn.jsdelivr.net/npm/atmosphere.js@4.1.0/atmosphere.min.js"></script>
+<script src="/js/atmosphere.global.js"></script>
 <script src="/js/javaclaw-atmosphere.js"></script>
 {% endblock %}

@@ -18,7 +18,6 @@ package ai.javaclaw.channels.atmosphere;
 import ai.javaclaw.agent.Agent;
 import ai.javaclaw.channels.ChannelRegistry;
 import org.atmosphere.cpr.AtmosphereFramework;
-import org.atmosphere.cpr.BroadcasterFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -41,8 +40,8 @@ public class AtmosphereChannelAutoConfiguration {
     @Bean
     public AtmosphereChatChannel atmosphereChatChannel(Agent agent,
                                                        ChannelRegistry channelRegistry,
-                                                       BroadcasterFactory broadcasterFactory) {
-        return new AtmosphereChatChannel(agent, channelRegistry, broadcasterFactory);
+                                                       AtmosphereFramework framework) {
+        return new AtmosphereChatChannel(agent, channelRegistry, framework);
     }
 
     @Bean

@@ -49,16 +49,6 @@ With Atmosphere's `UUIDBroadcasterCache`, messages sent while a client is discon
 
 ## Integration
 
-### Prerequisites
-
-Once Atmosphere is released to Maven Central, skip this step. Until then, build from source:
-
-```bash
-# Build Atmosphere (includes the Spring Boot starter)
-cd /path/to/atmosphere
-./mvnw install -Pfastinstall
-```
-
 ### Step 1: Enable pluggable chat transport
 
 JavaClaw needs [this 6-line PR](https://github.com/jobrunr/JavaClaw/pull/15) merged — it adds `@ConditionalOnProperty` to the three default chat classes so they can be swapped out via a property. Default behavior is unchanged.

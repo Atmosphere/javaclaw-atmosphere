@@ -1,5 +1,7 @@
 plugins {
     id 'java-library'
+    id 'maven-publish'
+    id 'signing'
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -21,11 +23,14 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
     }
+    withJavadocJar()
+    withSourcesJar()
 }
 
 dependencyManagement {
     imports {
         mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.3"
+        mavenBom "org.springframework.ai:spring-ai-bom:2.0.0-SNAPSHOT"
     }
 }
 
@@ -58,4 +63,57 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            pom {
+                name = 'Atmosphere JavaClaw Plugin'
+                description = 'Atmosphere chat transport for JavaClaw with streaming AI responses'
+                url = 'https://github.com/Atmosphere/javaclaw-atmosphere'
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'jfarcand'
+                        name = 'Jean-Francois Arcand'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/Atmosphere/javaclaw-atmosphere.git'
+                    developerConnection = 'scm:git:ssh://github.com:Atmosphere/javaclaw-atmosphere.git'
+                    url = 'https://github.com/Atmosphere/javaclaw-atmosphere'
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'central'
+            url = 'https://central.sonatype.com/repository/maven-releases/'
+            credentials {
+                username = findProperty('centralUsername') ?: System.getenv('CENTRAL_USERNAME') ?: ''
+                password = findProperty('centralPassword') ?: System.getenv('CENTRAL_PASSWORD') ?: ''
+            }
+        }
+    }
+}
+
+signing {
+    required { !version.toString().endsWith('-SNAPSHOT') }
+    def signingKey = findProperty('signingKey') ?: System.getenv('GPG_PRIVATE_KEY')
+    def signingPassword = findProperty('signingPassword') ?: System.getenv('GPG_PASSPHRASE')
+    if (signingKey) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    }
+    sign publishing.publications.mavenJava
 }

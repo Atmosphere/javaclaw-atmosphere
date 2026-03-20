@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       dry_run:
-        description: 'Dry run — build without publishing'
+        description: 'Dry run — build and sign without publishing'
         required: true
         type: boolean
         default: false
@@ -21,11 +21,14 @@ jobs:
   release:
     name: Release ${{ inputs.release_version }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+        token: ${{ secrets.RELEASE_TOKEN || github.token }}
 
     - name: Validate version format
       run: |
@@ -45,12 +48,14 @@ jobs:
         distribution: 'oracle'
         cache: 'gradle'
 
-    - name: Build dependencies
+    - name: Build Atmosphere (dependency)
       run: |
         git clone --depth 1 https://github.com/Atmosphere/atmosphere.git /tmp/atmosphere
         cd /tmp/atmosphere
         ./mvnw -B install -Pfastinstall -pl modules/cpr,modules/spring-boot-starter -am
 
+    - name: Build JavaClaw base (dependency)
+      run: |
         git clone --depth 1 https://github.com/jobrunr/JavaClaw.git /tmp/JavaClaw
         cd /tmp/JavaClaw
         ./gradlew :base:jar
@@ -63,17 +68,29 @@ jobs:
         </project>
         EOF
 
+    - name: Configure Git
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+
     - name: Set release version
       run: sed -i "s/version = '.*'/version = '${{ inputs.release_version }}'/" build.gradle
 
-    - name: Build
+    - name: Build and verify
       run: ./gradlew build
 
-    - name: Create git tag
+    - name: Publish to Maven Central
+      if: ${{ !inputs.dry_run }}
+      run: ./gradlew publish
+      env:
+        CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+        CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+    - name: Commit and tag release
       if: ${{ !inputs.dry_run }}
       run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
         git add build.gradle
         git commit -m "release: ${{ inputs.release_version }}"
         git tag -a "v${{ inputs.release_version }}" -m "Release ${{ inputs.release_version }}"
@@ -83,9 +100,9 @@ jobs:
       run: |
         sed -i "s/version = '.*'/version = '${{ inputs.next_dev_version }}'/" build.gradle
         git add build.gradle
-        git commit -m "chore: set next dev version ${{ inputs.next_dev_version }}"
+        git commit -m "chore: prepare next development version ${{ inputs.next_dev_version }}"
 
-    - name: Push tag and commits
+    - name: Push
       if: ${{ !inputs.dry_run }}
       run: |
         git push origin main

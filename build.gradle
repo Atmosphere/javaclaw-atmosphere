@@ -1,0 +1,58 @@
+plugins {
+    id 'java-library'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'org.atmosphere'
+version = '1.0.0-SNAPSHOT'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url = 'https://repo.spring.io/snapshot' }
+    maven { url = 'https://repo.spring.io/milestone' }
+    maven {
+        name = 'central-portal-snapshots'
+        url = 'https://central.sonatype.com/repository/maven-snapshots/'
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.3"
+    }
+}
+
+dependencies {
+    // Atmosphere
+    api 'org.atmosphere:atmosphere-spring-boot-starter:4.0.21-SNAPSHOT'
+
+    // JavaClaw base (Channel, Agent, ChannelRegistry)
+    compileOnly 'ai.javaclaw:base:1.0.0-SNAPSHOT'
+
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework:spring-web'
+
+    // Jackson 3.x (Spring Boot 4.0)
+    implementation 'tools.jackson.core:jackson-databind'
+
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xlint:deprecation']
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

@@ -4,7 +4,10 @@
  * Uses atmosphere.js v5 (global build) for WebSocket + SSE + long-polling
  * fallback and built-in reconnection with exponential backoff.
  *
- * Processes htmx OOB swap fragments so the existing chat UI works unchanged.
+ * Features:
+ * - Streaming AI responses with live markdown rendering
+ * - Tool call visualization (shows what the agent is doing)
+ * - OOB swap processing for htmx compatibility
  */
 (async function () {
     'use strict';
@@ -14,6 +17,9 @@
     var textarea  = document.getElementById('message-input');
     var sendBtn   = document.getElementById('send-btn');
     var chatBody  = document.querySelector('.chat-body');
+
+    // Raw markdown accumulated during streaming, rendered on each token
+    var streamingRawText = '';
 
     var request = {
         url: document.location.origin + '/atmosphere/chat',
@@ -53,12 +59,17 @@
             var data = response.responseBody;
             if (!data || data.trim().length === 0) return;
 
-            // Try JSON first (streaming tokens)
+            // Try JSON first (streaming tokens + tool calls)
             if (data.charAt(0) === '{') {
                 try {
                     var msg = JSON.parse(data);
                     if (msg.token !== undefined) {
                         appendToken(msg.token);
+                        scrollToBottom();
+                        return;
+                    }
+                    if (msg.tool !== undefined) {
+                        showToolCall(msg.tool);
                         scrollToBottom();
                         return;
                     }
@@ -114,18 +125,19 @@
         });
     }
 
-    // ---- Streaming token handling ----
+    // ---- Streaming token handling with markdown ----
 
     function appendToken(token) {
         var bubble = document.getElementById('streaming-bubble');
         if (!bubble) {
             // First token — create the agent bubble and hide typing dots
+            streamingRawText = '';
             var messages = document.getElementById('chat-messages');
             if (messages) {
                 messages.insertAdjacentHTML('beforeend',
                     '<article class="ar-msg ar-msg--agent">' +
                     '<div class="ar-msg__avatar">JC</div>' +
-                    '<div class="ar-msg__bubble" id="streaming-bubble"></div>' +
+                    '<div class="ar-msg__bubble ar-msg__bubble--markdown" id="streaming-bubble"></div>' +
                     '</article>');
             }
             var typing = document.getElementById('typing-indicator');
@@ -133,15 +145,44 @@
             bubble = document.getElementById('streaming-bubble');
         }
         if (bubble) {
-            bubble.insertAdjacentText('beforeend', token);
+            streamingRawText += token;
+            bubble.innerHTML = renderMarkdown(streamingRawText);
         }
     }
 
     function finalizeStreaming() {
         var bubble = document.getElementById('streaming-bubble');
         if (bubble) {
+            // Final render with full markdown
+            bubble.innerHTML = renderMarkdown(streamingRawText);
             bubble.removeAttribute('id');
         }
+        streamingRawText = '';
+    }
+
+    // ---- Tool call visualization ----
+
+    function showToolCall(toolName) {
+        var typing = document.getElementById('typing-indicator');
+        if (typing) {
+            typing.innerHTML =
+                '<div class="ar-tool-call">' +
+                '<div class="ar-msg__avatar">JC</div>' +
+                '<div class="ar-tool-call__label">' +
+                '<span class="ar-tool-call__icon">\u2699\uFE0F</span> ' +
+                escapeHtml(toolName) +
+                '</div></div>';
+        }
+    }
+
+    // ---- Markdown rendering ----
+
+    function renderMarkdown(text) {
+        if (typeof marked !== 'undefined' && marked.parse) {
+            return marked.parse(text, { breaks: true, gfm: true });
+        }
+        // Fallback: basic escaping with line breaks
+        return escapeHtml(text).replace(/\n/g, '<br>');
     }
 
     // ---- OOB swap processing ----
@@ -184,5 +225,11 @@
         if (chatBody) {
             chatBody.scrollTop = chatBody.scrollHeight;
         }
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
     }
 }());

@@ -40,6 +40,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework:spring-web'
 
+    // Spring AI (streaming ChatClient)
+    implementation 'org.springframework.ai:spring-ai-client-chat'
+
     // Jackson 3.x (Spring Boot 4.0)
     implementation 'tools.jackson.core:jackson-databind'
 

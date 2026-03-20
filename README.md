@@ -1,5 +1,7 @@
 # Atmosphere Chat Transport for JavaClaw
 
+[![CI](https://github.com/Atmosphere/javaclaw-atmosphere/actions/workflows/ci.yml/badge.svg)](https://github.com/Atmosphere/javaclaw-atmosphere/actions/workflows/ci.yml)
+
 Drop-in replacement for [JavaClaw](https://github.com/jobrunr/JavaClaw)'s Spring WebSocket chat with [Atmosphere](https://github.com/Atmosphere/atmosphere).
 
 ## What you get
@@ -9,6 +11,14 @@ Drop-in replacement for [JavaClaw](https://github.com/jobrunr/JavaClaw)'s Spring
 The default JavaClaw chat blocks for 10-30 seconds showing typing dots, then dumps the full response at once. With Atmosphere, responses stream **word by word** — the same experience as ChatGPT, Claude, and other modern AI chats.
 
 Uses the same `ChatClient` bean (same advisors, tools, memory) — just calls `.stream()` instead of `.call()`.
+
+### Live markdown rendering
+
+AI responses are rendered as rich markdown in real-time as tokens arrive: **bold**, `code`, code blocks, lists, tables, blockquotes — all formatted live during streaming via [marked.js](https://marked.js.org/).
+
+### Tool call visualization
+
+When the agent invokes tools (shell, file system, web fetch, skills), the UI shows what it's doing in real-time instead of just typing dots.
 
 ### Multi-client support
 
@@ -21,6 +31,10 @@ Atmosphere's `Broadcaster` handles any number of simultaneous clients natively.
 - **Automatic fallback** — WebSocket → SSE → long-polling, transparent to the UI
 - **Auto-reconnection** — configurable backoff, no manual refresh needed
 - **Proxy-friendly** — works behind corporate firewalls that block WebSocket
+
+### Conversation history on reconnect
+
+With Atmosphere's `UUIDBroadcasterCache`, messages sent while a client is disconnected are replayed on reconnect. Refresh the page and you don't lose the conversation.
 
 ## What gets replaced
 
@@ -70,6 +84,7 @@ javaclaw:
 
 atmosphere:
   servlet-path: /atmosphere/*
+  broadcaster-cache-class: org.atmosphere.cache.UUIDBroadcasterCache
 ```
 
 ### Step 4: Replace the chat template
@@ -81,9 +96,10 @@ cp src/main/resources/templates/chat.html.peb \
    /path/to/JavaClaw/app/src/main/resources/templates/chat.html.peb
 ```
 
-The template changes are minimal:
-- Removes `hx-ext="ws" ws-connect="/ws/chat"` from the outer div
-- Replaces `htmx-ext-ws` with `atmosphere.js` v5 (bundled, no CDN)
+The template changes:
+- Removes `hx-ext="ws" ws-connect="/ws/chat"` — Atmosphere handles the connection
+- Replaces `htmx-ext-ws` with `atmosphere.js` v5 (bundled) + `marked.js` (CDN)
+- Adds CSS for markdown rendering and tool call visualization
 - Form submission handled by atmosphere.js instead of htmx
 
 ### Step 5: Run
@@ -92,7 +108,7 @@ The template changes are minimal:
 ./gradlew bootRun
 ```
 
-Open `http://localhost:8080/chat` — responses stream word by word. Open multiple tabs to verify multi-client works.
+Open `http://localhost:8080/chat` — responses stream word by word with live markdown. Open multiple tabs to verify multi-client works.
 
 ## Architecture
 
@@ -105,17 +121,20 @@ Browser                         Server
   |                               |       |
   |                               |       |--- ChatClient.stream()  (same bean, same advisors)
   |<-- {"token": "Hello"} --------|       |      |
-  |<-- {"token": " world"} -------|       |      +-- tokens streamed via Reactor Flux
+  |<-- {"token": " world"} -------|       |      +-- tokens via Reactor Flux
+  |<-- {"tool": "WebSearch"} -----|       |      +-- tool call events
   |<-- {"done": true} ------------|       |
   |                               |  AtmosphereChatChannel
   |<-- OOB HTML (background) -----|       |--- Broadcaster.broadcast()
+  |                               |       |--- UUIDBroadcasterCache (reconnect replay)
   |                               |
   |                               |  ChannelRegistry (unchanged)
 ```
 
-**Streaming protocol:**
+**Protocol:**
 - OOB HTML for structural changes (user bubble, typing indicator, background messages)
-- `{"token": "text"}` JSON for streaming AI response tokens
+- `{"token": "text"}` for streaming AI response tokens (rendered as markdown)
+- `{"tool": "name"}` for tool call visualization
 - `{"done": true}` signals stream completion
 
 ## Configuration
@@ -126,6 +145,7 @@ All standard `atmosphere.*` Spring Boot properties are supported:
 atmosphere:
   servlet-path: /atmosphere/*
   heartbeat-interval: 30s
+  broadcaster-cache-class: org.atmosphere.cache.UUIDBroadcasterCache
   session-support: false
   websocket-support: true
 ```

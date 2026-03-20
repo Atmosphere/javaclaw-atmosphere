@@ -139,6 +139,70 @@
     align-self: flex-end;
     box-shadow: 0 3px 12px color-mix(in srgb, var(--bulma-primary) 45%, transparent);
 }
+
+/* Markdown rendering in agent bubbles */
+.ar-msg__bubble--markdown p { margin: 0 0 .5em; }
+.ar-msg__bubble--markdown p:last-child { margin-bottom: 0; }
+.ar-msg__bubble--markdown pre {
+    background: rgba(0,0,0,.3);
+    border-radius: .5rem;
+    padding: .6rem .8rem;
+    overflow-x: auto;
+    margin: .5em 0;
+    font-size: .85em;
+}
+.ar-msg__bubble--markdown code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: .88em;
+}
+.ar-msg__bubble--markdown :not(pre) > code {
+    background: rgba(0,0,0,.25);
+    padding: .15em .35em;
+    border-radius: .25rem;
+}
+.ar-msg__bubble--markdown ul, .ar-msg__bubble--markdown ol {
+    margin: .4em 0;
+    padding-left: 1.4em;
+}
+.ar-msg__bubble--markdown blockquote {
+    border-left: 3px solid var(--bulma-primary);
+    margin: .5em 0;
+    padding: .2em .8em;
+    opacity: .85;
+}
+.ar-msg__bubble--markdown h1, .ar-msg__bubble--markdown h2,
+.ar-msg__bubble--markdown h3, .ar-msg__bubble--markdown h4 {
+    margin: .6em 0 .3em;
+    font-weight: 700;
+}
+.ar-msg__bubble--markdown table {
+    border-collapse: collapse;
+    margin: .5em 0;
+    font-size: .9em;
+}
+.ar-msg__bubble--markdown th, .ar-msg__bubble--markdown td {
+    border: 1px solid rgba(255,255,255,.12);
+    padding: .3em .6em;
+}
+.ar-msg__bubble--markdown a { color: var(--bulma-primary); }
+
+/* Tool call indicator */
+.ar-tool-call {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    padding-top: .5rem;
+    animation: msg-in .22s cubic-bezier(.22,1,.36,1);
+}
+.ar-tool-call__label {
+    background: hsl(228, 22%, 13%);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 1.1rem;
+    padding: .5rem .85rem;
+    font-size: .85em;
+    color: var(--bulma-primary);
+    font-style: italic;
+}
 </style>
 {% endblock %}
 
@@ -210,6 +274,8 @@
 {% endblock %}
 
 {% block scripts %}
+{# marked.js for live markdown rendering during streaming #}
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
 {# atmosphere.js replaces htmx-ext-ws — provides WebSocket + SSE + long-polling fallback #}
 <script src="/js/atmosphere.global.js"></script>
 <script src="/js/javaclaw-atmosphere.js"></script>

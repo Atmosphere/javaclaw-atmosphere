@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      next_dev_version:
+        description: 'Next development version (e.g., 1.0.1-SNAPSHOT)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run — build without publishing'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    name: Release ${{ inputs.release_version }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Validate version format
+      run: |
+        if ! echo "${{ inputs.release_version }}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$'; then
+          echo "::error::Invalid release version: ${{ inputs.release_version }}"
+          exit 1
+        fi
+        if ! echo "${{ inputs.next_dev_version }}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$'; then
+          echo "::error::Next dev version must end with -SNAPSHOT"
+          exit 1
+        fi
+
+    - name: Set up JDK 25
+      uses: actions/setup-java@v4
+      with:
+        java-version: 25
+        distribution: 'oracle'
+        cache: 'gradle'
+
+    - name: Build dependencies
+      run: |
+        git clone --depth 1 https://github.com/Atmosphere/atmosphere.git /tmp/atmosphere
+        cd /tmp/atmosphere
+        ./mvnw -B install -Pfastinstall -pl modules/cpr,modules/spring-boot-starter -am
+
+        git clone --depth 1 https://github.com/jobrunr/JavaClaw.git /tmp/JavaClaw
+        cd /tmp/JavaClaw
+        ./gradlew :base:jar
+        mkdir -p ~/.m2/repository/ai/javaclaw/base/1.0.0-SNAPSHOT
+        cp base/build/libs/base-*.jar ~/.m2/repository/ai/javaclaw/base/1.0.0-SNAPSHOT/base-1.0.0-SNAPSHOT.jar
+        cat > ~/.m2/repository/ai/javaclaw/base/1.0.0-SNAPSHOT/base-1.0.0-SNAPSHOT.pom << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <project><modelVersion>4.0.0</modelVersion>
+          <groupId>ai.javaclaw</groupId><artifactId>base</artifactId><version>1.0.0-SNAPSHOT</version>
+        </project>
+        EOF
+
+    - name: Set release version
+      run: sed -i "s/version = '.*'/version = '${{ inputs.release_version }}'/" build.gradle
+
+    - name: Build
+      run: ./gradlew build
+
+    - name: Create git tag
+      if: ${{ !inputs.dry_run }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add build.gradle
+        git commit -m "release: ${{ inputs.release_version }}"
+        git tag -a "v${{ inputs.release_version }}" -m "Release ${{ inputs.release_version }}"
+
+    - name: Set next dev version
+      if: ${{ !inputs.dry_run }}
+      run: |
+        sed -i "s/version = '.*'/version = '${{ inputs.next_dev_version }}'/" build.gradle
+        git add build.gradle
+        git commit -m "chore: set next dev version ${{ inputs.next_dev_version }}"
+
+    - name: Push tag and commits
+      if: ${{ !inputs.dry_run }}
+      run: |
+        git push origin main
+        git push origin "v${{ inputs.release_version }}"
+
+    - name: Create GitHub Release
+      if: ${{ !inputs.dry_run }}
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ inputs.release_version }}
+        name: ${{ inputs.release_version }}
+        files: build/libs/*.jar
+        generate_release_notes: true

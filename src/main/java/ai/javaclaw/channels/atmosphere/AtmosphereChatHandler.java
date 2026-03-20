@@ -110,14 +110,34 @@ public class AtmosphereChatHandler implements AtmosphereHandler {
         );
         response.flushBuffer();
 
-        // Stream the AI response token-by-token using the same ChatClient bean
+        // Stream the AI response using the same ChatClient bean
         // (same advisors, tools, memory — just .stream() instead of .call())
+        // Uses chatResponse() to capture both content tokens and tool call events
         try {
             chatClient.prompt(userMessage)
                     .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, ChatMemory.CONVERSATION_ID))
                     .stream()
-                    .content()
-                    .doOnNext(token -> writeToken(response, token))
+                    .chatResponse()
+                    .doOnNext(chatResponse -> {
+                        var result = chatResponse.getResult();
+                        if (result == null) return;
+
+                        var output = result.getOutput();
+
+                        // Tool call events — show what the agent is doing
+                        if (output.getToolCalls() != null && !output.getToolCalls().isEmpty()) {
+                            for (var toolCall : output.getToolCalls()) {
+                                writeToolCall(response, toolCall.name());
+                            }
+                            return;
+                        }
+
+                        // Content token
+                        var text = output.getText();
+                        if (text != null && !text.isEmpty()) {
+                            writeToken(response, text);
+                        }
+                    })
                     .doOnComplete(() -> writeStreamEnd(response))
                     .doOnError(err -> {
                         log.error("Streaming error: {}", err.getMessage());
@@ -129,6 +149,15 @@ public class AtmosphereChatHandler implements AtmosphereHandler {
             log.error("Failed to start streaming: {}", e.getMessage());
             writeToken(response, "Sorry, I encountered an error: " + e.getMessage());
             writeStreamEnd(response);
+        }
+    }
+
+    private void writeToolCall(AtmosphereResponse response, String toolName) {
+        try {
+            response.write("{\"tool\":" + jsonEscape(toolName) + "}");
+            response.flushBuffer();
+        } catch (IOException e) {
+            log.warn("Failed to write tool call: {}", e.getMessage());
         }
     }
 

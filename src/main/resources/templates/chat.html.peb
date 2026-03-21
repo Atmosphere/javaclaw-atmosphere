@@ -141,6 +141,7 @@
 }
 
 /* Markdown rendering in agent bubbles */
+.ar-msg__bubble--markdown { white-space: normal; }
 .ar-msg__bubble--markdown p { margin: 0 0 .5em; }
 .ar-msg__bubble--markdown p:last-child { margin-bottom: 0; }
 .ar-msg__bubble--markdown pre {

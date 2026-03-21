@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/Atmosphere/javaclaw-atmosphere/actions/workflows/ci.yml/badge.svg)](https://github.com/Atmosphere/javaclaw-atmosphere/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Atmosphere/javaclaw-atmosphere?label=release)](https://github.com/Atmosphere/javaclaw-atmosphere/releases)
+[![Maven Central](https://img.shields.io/maven-central/v/org.atmosphere/javaclaw-atmosphere)](https://central.sonatype.com/artifact/org.atmosphere/javaclaw-atmosphere)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Drop-in replacement for [JavaClaw](https://github.com/jobrunr/JavaClaw)'s Spring WebSocket chat with [Atmosphere](https://github.com/Atmosphere/atmosphere).
@@ -55,7 +56,40 @@ JavaClaw needs [this 6-line PR](https://github.com/jobrunr/JavaClaw/pull/15) mer
 
 ### Step 2: Add the Atmosphere plugin
 
-Copy `plugins/atmosphere/` into the JavaClaw repo, or add as a dependency:
+**Option A: Maven dependency (recommended)**
+
+Add to JavaClaw's `app/build.gradle`:
+
+```gradle
+dependencies {
+    implementation 'org.atmosphere:javaclaw-atmosphere:0.1.0'
+}
+```
+
+That's it — the JAR is on [Maven Central](https://central.sonatype.com/artifact/org.atmosphere/javaclaw-atmosphere). The `ai.javaclaw:base` classes are provided by JavaClaw's own classpath at runtime.
+
+**Option B: As a JavaClaw subproject**
+
+If you prefer to build from source, clone this repo into `plugins/atmosphere/` and create a minimal `build.gradle`:
+
+```gradle
+// plugins/atmosphere/build.gradle
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    implementation project(':base')
+    api 'org.atmosphere:atmosphere-spring-boot-starter:4.0.21'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework:spring-web'
+    implementation 'org.springframework.ai:spring-ai-client-chat'
+    implementation 'tools.jackson.core:jackson-databind'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+}
+```
+
+Then register it:
 
 ```gradle
 // settings.gradle
@@ -64,6 +98,8 @@ include 'plugins:atmosphere'
 // app/build.gradle
 implementation project(':plugins:atmosphere')
 ```
+
+> **Note:** The `build.gradle` in this repo is for standalone CI/publishing. When using as a JavaClaw subproject, use the simplified version above — it inherits repositories, BOMs, and toolchain config from JavaClaw's root project.
 
 ### Step 3: Configure
 

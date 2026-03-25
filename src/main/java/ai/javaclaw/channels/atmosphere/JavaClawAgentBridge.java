@@ -89,7 +89,7 @@ public class JavaClawAgentBridge {
                     @AgentSkillParam(name = "message", description = "The question to ask") String message) {
         task.updateStatus(TaskState.WORKING, "Processing: " + message);
         try {
-            var response = agent.respondTo(message);
+            var response = agent.respondTo(message, "atmosphere");
             task.addArtifact(Artifact.text(response));
             task.complete("Response generated");
         } catch (Exception e) {

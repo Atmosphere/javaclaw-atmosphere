@@ -70,7 +70,7 @@ public class JavaClawToolBridge {
                     @AgentSkillParam(name = "message", description = "The question or request") String message) {
         task.updateStatus(TaskState.WORKING, "Processing: " + message);
         try {
-            var response = agent.respondTo(message);
+            var response = agent.respondTo(message, "atmosphere");
             task.addArtifact(Artifact.text(response));
             task.complete("Response generated");
         } catch (Exception e) {
@@ -93,7 +93,7 @@ public class JavaClawToolBridge {
         task.updateStatus(TaskState.WORKING, "Searching: " + query);
         try {
             var response = agent.respondTo("Search the web for: " + query
-                    + ". Return a concise summary of the top results.");
+                    + ". Return a concise summary of the top results.", "atmosphere");
             task.addArtifact(Artifact.text(response));
             task.complete("Search complete");
         } catch (Exception e) {
@@ -113,7 +113,7 @@ public class JavaClawToolBridge {
                            @AgentSkillParam(name = "action", description = "What to do: 'create', 'list', 'complete', or describe the task") String action) {
         task.updateStatus(TaskState.WORKING, "Managing task: " + action);
         try {
-            var response = agent.respondTo(action);
+            var response = agent.respondTo(action, "atmosphere");
             task.addArtifact(Artifact.text(response));
             task.complete("Task action complete");
         } catch (Exception e) {
@@ -133,7 +133,7 @@ public class JavaClawToolBridge {
                         @AgentSkillParam(name = "request", description = "What to do with files") String request) {
         task.updateStatus(TaskState.WORKING, "File operation: " + request);
         try {
-            var response = agent.respondTo(request);
+            var response = agent.respondTo(request, "atmosphere");
             task.addArtifact(Artifact.text(response));
             task.complete("File operation complete");
         } catch (Exception e) {

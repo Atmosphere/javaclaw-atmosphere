@@ -71,7 +71,7 @@ public class AtmosphereChatChannel implements Channel {
     public String chat(String message) {
         channelRegistry.publishMessageReceivedEvent(
                 new ChannelMessageReceivedEvent(getName(), message));
-        return agent.respondTo(message);
+        return agent.respondTo(message, "atmosphere");
     }
 
     /**

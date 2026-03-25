@@ -121,6 +121,8 @@ jobs:
 
     - name: Run E2E tests
       working-directory: e2e
+      env:
+        JAVACLAW_DIR: /tmp/JavaClaw
       run: npx playwright test --reporter=github
 
     - name: Upload test results

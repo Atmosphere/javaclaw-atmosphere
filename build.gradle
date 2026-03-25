@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.atmosphere'
-version = '0.1.2-SNAPSHOT'
+version = '0.2.0'
 
 repositories {
     mavenLocal()
@@ -36,11 +36,11 @@ dependencyManagement {
 
 dependencies {
     // Atmosphere
-    api 'org.atmosphere:atmosphere-spring-boot-starter:4.0.25'
-    api 'org.atmosphere:atmosphere-agent:4.0.25'
-    api 'org.atmosphere:atmosphere-a2a:4.0.25'
-    api 'org.atmosphere:atmosphere-ai:4.0.25'
-    api 'org.atmosphere:atmosphere-mcp:4.0.25'
+    api 'org.atmosphere:atmosphere-spring-boot-starter:4.0.26'
+    api 'org.atmosphere:atmosphere-agent:4.0.26'
+    api 'org.atmosphere:atmosphere-a2a:4.0.26'
+    api 'org.atmosphere:atmosphere-ai:4.0.26'
+    api 'org.atmosphere:atmosphere-mcp:4.0.26'
 
     // JavaClaw base (Channel, Agent, ChannelRegistry)
     compileOnly 'ai.javaclaw:base:1.0.0-SNAPSHOT'

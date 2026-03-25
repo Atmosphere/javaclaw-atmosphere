@@ -4,23 +4,30 @@
 [![Release](https://img.shields.io/github/v/release/Atmosphere/javaclaw-atmosphere?label=release)](https://github.com/Atmosphere/javaclaw-atmosphere/releases)
 [![Maven Central](https://img.shields.io/maven-central/v/org.atmosphere/javaclaw-atmosphere)](https://central.sonatype.com/artifact/org.atmosphere/javaclaw-atmosphere)
 
-**Your JavaClaw agent's tools, available everywhere.**
+## When You Need It
 
-Add one dependency and your JavaClaw agent becomes accessible from Claude Desktop, Cursor, VS Code, other AI agents, and messaging platforms — without changing a line of code.
+**"Can I use my agent from VS Code?"** Yes.
 
-## Quick Start
+**"Can responses stream word-by-word like ChatGPT?"** Yes.
+
+**"Can my team share the agent?"** Yes.
+
+**"Can other AI agents call mine?"** Yes.
 
 ```groovy
-// app/build.gradle
-implementation 'org.atmosphere:javaclaw-atmosphere:0.1.2'
+implementation 'org.atmosphere:javaclaw-atmosphere:0.2.0'
 ```
 
-Run your app. That's it.
+## What It Does
 
-## What You Get
+Adds real-time transport and protocol support to your JavaClaw agent. Nothing changes in your agent code — Atmosphere plugs in alongside and exposes your existing skills through additional protocols.
 
-### Your tools work in Claude Desktop
-JavaClaw's tools (web search, file system, shell, tasks) are automatically exposed via MCP. Configure Claude Desktop:
+### Streaming responses
+JavaClaw's default `agent.respondTo()` returns the full response at once. With Atmosphere, tokens stream to the browser word-by-word. Your users see the answer forming in real-time.
+
+### Use your agent from any IDE
+Your agent's skills become available as MCP tools. Configure your IDE once:
+
 ```json
 {
   "mcpServers": {
@@ -28,43 +35,36 @@ JavaClaw's tools (web search, file system, shell, tasks) are automatically expos
   }
 }
 ```
-Now ask Claude: *"Search the web for latest AI agent frameworks"* — Claude calls your JavaClaw agent.
 
-### Other agents can call yours
-Your agent publishes an A2A Agent Card. Google ADK agents, CrewAI pipelines, and other Atmosphere agents discover and delegate tasks to your JavaClaw agent via JSON-RPC:
-```
-GET  http://localhost:8080/atmosphere/agent/javaclaw/a2a → Agent Card
-POST http://localhost:8080/atmosphere/agent/javaclaw/a2a → message/send
-```
+Then use your JavaClaw agent's web search, file operations, and task management directly from Cursor, VS Code, Windsurf, or any MCP-compatible tool — without leaving your editor.
 
-### Streaming AI responses
-Chat responses stream token-by-token like ChatGPT, instead of waiting for the full response. Multiple browser tabs work simultaneously.
+### Multiple users, same agent
+JavaClaw's web chat supports one session. With Atmosphere, multiple browser tabs and multiple users connect simultaneously. Useful when a team shares an agent for research, planning, or daily standups.
 
-### Transport resilience
-Auto-reconnection, WebSocket → SSE → long-polling fallback. Connection drops recover transparently.
+### Agent-to-agent communication
+Your agent publishes an A2A Agent Card. Other AI agents — Google ADK, Atmosphere multi-agent teams, or custom agents — can discover yours and delegate tasks via JSON-RPC. Your personal assistant becomes a participant in larger workflows.
 
-## Skills Exposed
+### Auto-reconnection
+Connection drops (laptop sleep, network switch, page refresh) recover automatically. No lost context, no manual reconnect.
 
-When Atmosphere is added, these skills become discoverable via A2A and MCP:
+## Setup
 
-| Skill | Description |
-|-------|-------------|
-| **ask** | Full agent interaction — uses ALL JavaClaw tools (web search, files, shell, tasks) |
-| **search** | Web search via JavaClaw's configured provider |
-| **task** | Create, list, or manage tasks |
-| **files** | Read, write, edit workspace files |
-
-## How It Works
-
-```
-JavaClaw boots
-  → Spring Boot finds javaclaw-atmosphere on classpath
-  → Auto-configures Atmosphere transport + A2A + MCP
-  → Your agent's tools are exposed as discoverable skills
-  → Claude Desktop / Cursor / VS Code / other agents can call them
+```groovy
+// app/build.gradle
+implementation 'org.atmosphere:javaclaw-atmosphere:0.2.0'
 ```
 
-Zero config. Zero code changes. One dependency.
+Run your app. Atmosphere auto-configures when it detects JavaClaw's `Agent` bean on the classpath.
+
+## What Gets Exposed
+
+All your existing JavaClaw skills and tools are automatically available through:
+
+| Protocol | Endpoint | Used by |
+|----------|----------|---------|
+| WebSocket | `/atmosphere/chat` | Browser (streaming) |
+| MCP | `/atmosphere/mcp` | Cursor, VS Code, Windsurf, Claude Desktop |
+| A2A | `/atmosphere/agent/javaclaw/a2a` | Other AI agents |
 
 ## Requirements
 

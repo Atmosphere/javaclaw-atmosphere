@@ -82,10 +82,20 @@ public class AtmosphereChannelAutoConfiguration {
 
     /**
      * Bridge JavaClaw's agent into Atmosphere's agent ecosystem.
-     * Exposes the agent via A2A protocol and MCP for external tool discovery.
+     * Exposes streaming chat via {@code @Prompt}.
      */
     @Bean
     public JavaClawAgentBridge javaClawAgentBridge(Agent agent, ChatClient chatClient) {
         return new JavaClawAgentBridge(agent, chatClient);
+    }
+
+    /**
+     * Exposes JavaClaw's tools (web search, file system, shell, tasks)
+     * as A2A-discoverable skills and MCP tools. External AI tools like
+     * Claude Desktop, Cursor, and VS Code can call these directly.
+     */
+    @Bean
+    public JavaClawToolBridge javaClawToolBridge(Agent agent, ChatClient chatClient) {
+        return new JavaClawToolBridge(agent, chatClient);
     }
 }

@@ -40,15 +40,23 @@ public class AtmosphereChatChannel implements Channel {
 
     private final Agent agent;
     private final ChannelRegistry channelRegistry;
-    private final AtmosphereFramework framework;
+    private final org.springframework.context.ApplicationContext ctx;
+    private volatile AtmosphereFramework framework;
 
     public AtmosphereChatChannel(Agent agent, ChannelRegistry channelRegistry,
-                                 AtmosphereFramework framework) {
+                                 org.springframework.context.ApplicationContext ctx) {
         this.agent = agent;
         this.channelRegistry = channelRegistry;
-        this.framework = framework;
+        this.ctx = ctx;
         channelRegistry.registerChannel(this);
         log.info("Started Atmosphere Chat channel");
+    }
+
+    private AtmosphereFramework framework() {
+        if (framework == null) {
+            framework = ctx.getBean(AtmosphereFramework.class);
+        }
+        return framework;
     }
 
     @Override
@@ -73,7 +81,7 @@ public class AtmosphereChatChannel implements Channel {
      */
     @Override
     public void sendMessage(String message) {
-        BroadcasterFactory factory = framework.getBroadcasterFactory();
+        BroadcasterFactory factory = framework().getBroadcasterFactory();
         if (factory == null) {
             log.warn("Atmosphere framework not yet initialized, message dropped");
             return;

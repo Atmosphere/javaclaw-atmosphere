@@ -17,7 +17,6 @@ package ai.javaclaw.channels.atmosphere;
 
 import ai.javaclaw.agent.Agent;
 import ai.javaclaw.channels.ChannelRegistry;
-import org.atmosphere.cpr.AtmosphereFramework;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -43,7 +42,7 @@ import tools.jackson.databind.ObjectMapper;
  * {@code Agent} are on the classpath.</p>
  */
 @AutoConfiguration
-@ConditionalOnClass(AtmosphereFramework.class)
+@ConditionalOnClass(org.atmosphere.cpr.AtmosphereFramework.class)
 @ConditionalOnBean(Agent.class)
 public class AtmosphereChannelAutoConfiguration {
 
@@ -57,18 +56,28 @@ public class AtmosphereChannelAutoConfiguration {
     @Bean
     public AtmosphereChatChannel atmosphereChatChannel(Agent agent,
                                                        ChannelRegistry channelRegistry,
-                                                       AtmosphereFramework framework) {
-        return new AtmosphereChatChannel(agent, channelRegistry, framework);
+                                                       org.springframework.context.ApplicationContext ctx) {
+        // Lazy lookup: AtmosphereFramework bean is created during servlet init
+        return new AtmosphereChatChannel(agent, channelRegistry, ctx);
     }
 
     @Bean
     public AtmosphereChatHandler atmosphereChatHandler(ChatClient chatClient,
                                                        ChannelRegistry channelRegistry,
                                                        ObjectMapper objectMapper,
-                                                       AtmosphereFramework framework) {
-        var handler = new AtmosphereChatHandler(chatClient, channelRegistry, objectMapper);
-        framework.addAtmosphereHandler(AtmosphereChatChannel.BROADCASTER_PATH, handler);
-        return handler;
+                                                       org.springframework.context.ApplicationContext ctx) {
+        return new AtmosphereChatHandler(chatClient, channelRegistry, objectMapper, ctx);
+    }
+
+    /**
+     * Registers the chat handler with Atmosphere after the web server starts.
+     * Uses ApplicationReadyEvent
+     * to ensure the servlet container (and Atmosphere) is fully initialized.
+     */
+    @Bean
+    public org.springframework.context.ApplicationListener<org.springframework.boot.context.event.ApplicationReadyEvent>
+    atmosphereHandlerRegistrar(AtmosphereChatHandler handler) {
+        return event -> handler.ensureRegistered();
     }
 
     /**

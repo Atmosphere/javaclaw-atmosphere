@@ -39,8 +39,8 @@ import org.springframework.ai.chat.memory.ChatMemory;
  * <p>Exposes:</p>
  * <ul>
  *   <li>{@code @Prompt} — streaming AI chat via WebSocket</li>
- *   <li>{@code @AgentSkill("chat")} — A2A-discoverable chat skill</li>
- *   <li>{@code @AgentSkill("ask")} — synchronous Q&A via JavaClaw agent</li>
+ *   <li>AgentSkill chat — A2A-discoverable chat skill</li>
+ *   <li>AgentSkill ask — synchronous QA via JavaClaw agent</li>
  * </ul>
  */
 public class JavaClawAgentBridge {

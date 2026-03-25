@@ -49,12 +49,44 @@ public class AtmosphereChatHandler implements AtmosphereHandler {
     private final ChatClient chatClient;
     private final ChannelRegistry channelRegistry;
     private final ObjectMapper objectMapper;
+    private final org.springframework.context.ApplicationContext ctx;
+    private volatile boolean registered;
 
     public AtmosphereChatHandler(ChatClient chatClient, ChannelRegistry channelRegistry,
-                                 ObjectMapper objectMapper) {
+                                 ObjectMapper objectMapper,
+                                 org.springframework.context.ApplicationContext ctx) {
         this.chatClient = chatClient;
         this.channelRegistry = channelRegistry;
+        this.ctx = ctx;
         this.objectMapper = objectMapper;
+    }
+
+    /**
+     * Lazily registers this handler with the Atmosphere framework on first request.
+     * This deferred registration avoids the Spring Boot 4.0 bean lifecycle ordering
+     * issue where the AtmosphereFramework bean isn't available at auto-config time.
+     */
+    void ensureRegistered() {
+        if (!registered) {
+            synchronized (this) {
+                if (!registered) {
+                    try {
+                        // Use full reflection to avoid DevTools dual-classloader ClassCastException
+                        var reg = ctx.getBean("atmosphereServletRegistration");
+                        var servlet = reg.getClass().getMethod("getServlet").invoke(reg);
+                        var framework = servlet.getClass().getMethod("framework").invoke(servlet);
+                        framework.getClass().getMethod("addAtmosphereHandler",
+                                        String.class, org.atmosphere.cpr.AtmosphereHandler.class)
+                                .invoke(framework, AtmosphereChatChannel.BROADCASTER_PATH, this);
+                        registered = true;
+                        log.info("Registered Atmosphere chat handler at {}",
+                                AtmosphereChatChannel.BROADCASTER_PATH);
+                    } catch (Exception e) {
+                        log.error("Failed to register Atmosphere handler: {}", e.getMessage());
+                    }
+                }
+            }
+        }
     }
 
     @Override

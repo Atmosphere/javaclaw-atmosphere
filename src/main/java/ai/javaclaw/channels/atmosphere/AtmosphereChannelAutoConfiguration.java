@@ -29,14 +29,18 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * Spring Boot auto-configuration that wires up Atmosphere as the chat
- * transport for JavaClaw with streaming AI responses.
+ * transport for JavaClaw with streaming AI responses and A2A agent discovery.
  *
- * <p>Uses the same {@link ChatClient} bean as JavaClaw's {@code DefaultAgent}
- * (with all advisors, tools, and memory) but calls {@code .stream()} instead
- * of {@code .call()}, delivering each token to the browser as it arrives.
+ * <p>Registers:</p>
+ * <ul>
+ *   <li>{@link AtmosphereChatChannel} — JavaClaw Channel for background messages</li>
+ *   <li>{@link AtmosphereChatHandler} — WebSocket streaming handler (htmx)</li>
+ *   <li>{@link JavaClawAgentBridge} — bridges JavaClaw agent into Atmosphere's
+ *       {@code @Agent} ecosystem with A2A discoverable skills</li>
+ * </ul>
  *
  * <p>Activated automatically when both {@code AtmosphereFramework} and
- * {@code Agent} are on the classpath.
+ * {@code Agent} are on the classpath.</p>
  */
 @AutoConfiguration
 @ConditionalOnClass(AtmosphereFramework.class)
@@ -65,5 +69,14 @@ public class AtmosphereChannelAutoConfiguration {
         var handler = new AtmosphereChatHandler(chatClient, channelRegistry, objectMapper);
         framework.addAtmosphereHandler(AtmosphereChatChannel.BROADCASTER_PATH, handler);
         return handler;
+    }
+
+    /**
+     * Bridge JavaClaw's agent into Atmosphere's agent ecosystem.
+     * Exposes the agent via A2A protocol and MCP for external tool discovery.
+     */
+    @Bean
+    public JavaClawAgentBridge javaClawAgentBridge(Agent agent, ChatClient chatClient) {
+        return new JavaClawAgentBridge(agent, chatClient);
     }
 }
